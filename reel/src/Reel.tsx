@@ -15,16 +15,16 @@ const CLIPS: Clip[] = [
   {file: 'vitamins.jpg', start: 0, bright: 0.75, zoom: 'out'},
   {file: 'book', start: 0.4, bright: 0.95, zoom: 'in'},
   {file: null /* спортзал: сюда встанет кадр зала */, start: 0, bright: 1, zoom: 'in'},
-  {file: 'class', start: 3.0, bright: 0.92, zoom: 'out'},
-  {file: 'cafe', start: 0.2, bright: 0.9, zoom: 'in'},
+  {file: 'desk', start: 1.0, bright: 1.0, zoom: 'out'},
+  {file: 'sw', start: 0.3, bright: 1.0, zoom: 'in'},
 ];
 const SLOT_F = Math.round(DURATION / CLIPS.length);
 
-const Shot: React.FC<{clip: Clip; frames: number}> = ({clip, frames}) => {
+const Shot: React.FC<{clip: Clip; frames: number; first?: boolean}> = ({clip, frames, first}) => {
   const f = useCurrentFrame();
   const t = f / frames;
   const scale = clip.zoom === 'in' ? 1.04 + t * 0.07 : 1.11 - t * 0.07;
-  const fadeIn = interpolate(f, [0, 4], [0, 1], {extrapolateRight: 'clamp'});
+  const fadeIn = first ? 1 : interpolate(f, [0, 4], [0, 1], {extrapolateRight: 'clamp'});
   if (!clip.file) {
     return (
       <AbsoluteFill style={{background: 'linear-gradient(160deg,#2a2622,#14110f)', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 220}}>
@@ -89,7 +89,7 @@ export const Reel: React.FC = () => (
   <AbsoluteFill style={{background: '#111'}}>
     {CLIPS.map((c, i) => (
       <Sequence key={i} from={i * SLOT_F} durationInFrames={SLOT_F + 5}>
-        <Shot clip={c} frames={SLOT_F + 5} />
+        <Shot clip={c} frames={SLOT_F + 5} first={i === 0} />
       </Sequence>
     ))}
     {/* единая мягкая тонировка + затемнение под текст */}

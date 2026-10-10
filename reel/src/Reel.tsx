@@ -1,22 +1,24 @@
-import {AbsoluteFill, Audio, Sequence, OffthreadVideo, interpolate, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Audio, Img, Sequence, OffthreadVideo, interpolate, staticFile, useCurrentFrame} from 'remotion';
 
 export const FPS = 30;
 const sec = (s: number) => Math.round(s * FPS);
 export const DURATION = sec(9.6);
 
 // Light normalisation: brightness factor brings every clip to ~118 average luma (measured with ffmpeg).
-type Clip = {file: string | null; start: number; len: number; bright: number; zoom: 'in' | 'out'};
-const SLOT = 1.2;
+type Clip = {file: string | null; start: number; bright: number; zoom: 'in' | 'out'};
 const CLIPS: Clip[] = [
-  {file: 'walk', start: 2.0, len: SLOT, bright: 0.9, zoom: 'in'},
-  {file: 'rain', start: 1.8, len: SLOT, bright: 0.84, zoom: 'out'},
-  {file: 'table', start: 0.2, len: SLOT, bright: 1.28, zoom: 'in'},
-  {file: 'lamp', start: 0.5, len: SLOT, bright: 1.15, zoom: 'out'},
-  {file: 'book', start: 0.4, len: SLOT, bright: 0.95, zoom: 'in'},
-  {file: null /* спортзал: сюда встанет кадр зала */, start: 0, len: SLOT, bright: 1, zoom: 'in'},
-  {file: 'class', start: 3.0, len: SLOT, bright: 0.92, zoom: 'out'},
-  {file: 'cafe', start: 0.2, len: SLOT, bright: 0.9, zoom: 'in'},
+  {file: 'walk', start: 2.0, bright: 0.9, zoom: 'in'},
+  {file: 'rain', start: 1.8, bright: 0.84, zoom: 'out'},
+  {file: 'table', start: 0.2, bright: 1.28, zoom: 'in'},
+  {file: 'lamp', start: 0.5, bright: 1.15, zoom: 'out'},
+  {file: 'food', start: 0.3, bright: 0.82, zoom: 'in'},
+  {file: 'vitamins.jpg', start: 0, bright: 0.75, zoom: 'out'},
+  {file: 'book', start: 0.4, bright: 0.95, zoom: 'in'},
+  {file: null /* спортзал: сюда встанет кадр зала */, start: 0, bright: 1, zoom: 'in'},
+  {file: 'class', start: 3.0, bright: 0.92, zoom: 'out'},
+  {file: 'cafe', start: 0.2, bright: 0.9, zoom: 'in'},
 ];
+const SLOT_F = Math.round(DURATION / CLIPS.length);
 
 const Shot: React.FC<{clip: Clip; frames: number}> = ({clip, frames}) => {
   const f = useCurrentFrame();
@@ -30,16 +32,24 @@ const Shot: React.FC<{clip: Clip; frames: number}> = ({clip, frames}) => {
       </AbsoluteFill>
     );
   }
+  const style = {
+    width: '100%', height: '100%', objectFit: 'cover' as const, transform: `scale(${scale})`,
+    filter: `brightness(${clip.bright}) contrast(1.05) saturate(0.92) sepia(0.1)`,
+  };
+  if (clip.file.endsWith('.jpg')) {
+    return (
+      <AbsoluteFill style={{opacity: fadeIn}}>
+        <Img src={staticFile(`clips/${clip.file}`)} style={style} />
+      </AbsoluteFill>
+    );
+  }
   return (
     <AbsoluteFill style={{opacity: fadeIn}}>
       <OffthreadVideo
         src={staticFile(`clips/${clip.file}.mp4`)}
         startFrom={sec(clip.start)}
         muted
-        style={{
-          width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale})`,
-          filter: `brightness(${clip.bright}) contrast(1.05) saturate(0.92) sepia(0.1)`,
-        }}
+        style={style}
       />
     </AbsoluteFill>
   );
@@ -78,8 +88,8 @@ const Caption: React.FC<{line: Line}> = ({line}) => {
 export const Reel: React.FC = () => (
   <AbsoluteFill style={{background: '#111'}}>
     {CLIPS.map((c, i) => (
-      <Sequence key={i} from={sec(i * SLOT)} durationInFrames={sec(SLOT)}>
-        <Shot clip={c} frames={sec(SLOT)} />
+      <Sequence key={i} from={i * SLOT_F} durationInFrames={SLOT_F + 5}>
+        <Shot clip={c} frames={SLOT_F + 5} />
       </Sequence>
     ))}
     {/* единая мягкая тонировка + затемнение под текст */}

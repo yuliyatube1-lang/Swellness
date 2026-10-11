@@ -15,8 +15,7 @@ const CLIPS: Clip[] = [
   {file: 'vitamins.jpg', start: 0, bright: 0.75, zoom: 'out'},
   {file: 'book', start: 0.4, bright: 0.95, zoom: 'in'},
   {file: null /* спортзал: сюда встанет кадр зала */, start: 0, bright: 1, zoom: 'in'},
-  {file: 'desk', start: 1.0, bright: 1.0, zoom: 'out'},
-  {file: 'sw', start: 0.3, bright: 1.0, zoom: 'in'},
+  {file: 'desk', start: 5.4, bright: 1.0, zoom: 'out'},
 ];
 const SLOT_F = Math.round(DURATION / CLIPS.length);
 

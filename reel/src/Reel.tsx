@@ -2,10 +2,10 @@ import {AbsoluteFill, Audio, Img, Sequence, OffthreadVideo, interpolate, staticF
 
 export const FPS = 30;
 const sec = (s: number) => Math.round(s * FPS);
-export const DURATION = sec(9.6);
 
 // Light normalisation: brightness factor brings every clip to ~118 average luma (measured with ffmpeg).
-type Clip = {file: string | null; start: number; bright: number; zoom: 'in' | 'out'};
+type Clip = {file: string | null; start: number; bright: number; zoom: 'in' | 'out'; len?: number; origin?: string; base?: number};
+const SLOT = 0.95;
 const CLIPS: Clip[] = [
   {file: 'walk', start: 2.0, bright: 0.9, zoom: 'in'},
   {file: 'rain', start: 1.8, bright: 0.84, zoom: 'out'},
@@ -14,15 +14,19 @@ const CLIPS: Clip[] = [
   {file: 'food', start: 0.3, bright: 0.82, zoom: 'in'},
   {file: 'vitamins.jpg', start: 0, bright: 0.75, zoom: 'out'},
   {file: 'book', start: 0.4, bright: 0.95, zoom: 'in'},
-  {file: 'gym', start: 3.0, bright: 1.05, zoom: 'in'},
-  {file: 'desk', start: 5.4, bright: 1.0, zoom: 'out'},
+  {file: 'gym', start: 4.3, len: 1.15, bright: 1.05, zoom: 'out', origin: '75% 100%', base: 1.08},
+  {file: 'desk', start: 4.8, bright: 1.0, zoom: 'out', len: 3.0},
 ];
-const SLOT_F = Math.round(DURATION / CLIPS.length);
+const lens = CLIPS.map((c) => sec(c.len ?? SLOT));
+const starts = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0));
+export const DURATION = lens.reduce((a, b) => a + b, 0);
+const MUSIC = sec(9.6);
 
 const Shot: React.FC<{clip: Clip; frames: number; first?: boolean}> = ({clip, frames, first}) => {
   const f = useCurrentFrame();
   const t = f / frames;
-  const scale = clip.zoom === 'in' ? 1.04 + t * 0.07 : 1.11 - t * 0.07;
+  const b = clip.base ?? 1.04;
+  const scale = clip.zoom === 'in' ? b + t * 0.07 : b + 0.07 - t * 0.07;
   const fadeIn = first ? 1 : interpolate(f, [0, 4], [0, 1], {extrapolateRight: 'clamp'});
   if (!clip.file) {
     return (
@@ -32,7 +36,7 @@ const Shot: React.FC<{clip: Clip; frames: number; first?: boolean}> = ({clip, fr
     );
   }
   const style = {
-    width: '100%', height: '100%', objectFit: 'cover' as const, transform: `scale(${scale})`,
+    width: '100%', height: '100%', objectFit: 'cover' as const, transform: `scale(${scale})`, transformOrigin: clip.origin ?? '50% 50%',
     filter: `brightness(${clip.bright}) contrast(1.05) saturate(0.92) sepia(0.1)`,
   };
   if (clip.file.endsWith('.jpg')) {
@@ -60,7 +64,7 @@ const LINES: Line[] = [
   {text: ['Октябрь', 'Ноябрь', 'Декабрь'], from: 1.2, to: 3.8},
   {text: ['Возьми следующие 3 месяца'], from: 3.8, to: 5.4},
   {text: ['и посвяти их действиям,', 'которые помогут'], from: 5.4, to: 7.6},
-  {text: ['тебе стать той версией себя,', 'которой ты хочешь быть.'], from: 7.6, to: 9.6},
+  {text: ['тебе стать той версией себя,', 'которой ты хочешь быть.'], from: 7.6, to: DURATION / FPS},
 ];
 
 const Caption: React.FC<{line: Line}> = ({line}) => {
@@ -87,8 +91,8 @@ const Caption: React.FC<{line: Line}> = ({line}) => {
 export const Reel: React.FC = () => (
   <AbsoluteFill style={{background: '#111'}}>
     {CLIPS.map((c, i) => (
-      <Sequence key={i} from={i * SLOT_F} durationInFrames={SLOT_F + 5}>
-        <Shot clip={c} frames={SLOT_F + 5} first={i === 0} />
+      <Sequence key={i} from={starts[i]} durationInFrames={lens[i] + 5}>
+        <Shot clip={c} frames={lens[i] + 5} first={i === 0} />
       </Sequence>
     ))}
     {/* единая мягкая тонировка + затемнение под текст */}
@@ -98,6 +102,6 @@ export const Reel: React.FC = () => (
         <Caption line={l} />
       </Sequence>
     ))}
-    <Audio src={staticFile('audio/music.mp3')} />
+    <Audio src={staticFile('audio/music.mp3')} volume={(f) => interpolate(f, [MUSIC - 12, MUSIC], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})} />
   </AbsoluteFill>
 );
